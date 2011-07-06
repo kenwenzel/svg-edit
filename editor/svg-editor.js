@@ -53,7 +53,6 @@
 				jGraduatePath: 'jgraduate/images/',
 				extensions: ['ext-markers.js','ext-connector.js', 'ext-eyedropper.js', 'ext-shapes.js', 'ext-imagelib.js','ext-grid.js'],
 				initTool: 'select',
-				wireframe: false,
 				colorPickerCSS: null,
 				gridSnapping: false,
 				baseUnit: 'px',
@@ -292,7 +291,6 @@
 					'open':'open.png',
 					'source':'source.png',
 					'docprops':'document-properties.png',
-					'wireframe':'wireframe.png',
 					
 					'undo':'undo.png',
 					'redo':'redo.png',
@@ -350,7 +348,6 @@
 					'#tool_import div div':'import',
 					'#tool_source':'source',
 					'#tool_docprops > div':'docprops',
-					'#tool_wireframe':'wireframe',
 					
 					'#tool_undo':'undo',
 					'#tool_redo':'redo',
@@ -507,8 +504,7 @@
 				zoomInIcon = 'crosshair',
 				zoomOutIcon = 'crosshair',
 				ui_context = 'toolbars',
-				orig_source = '',
-				paintBox = {fill: null, stroke:null};
+				orig_source = '';
 
 			// This sets up alternative dialog boxes. They mostly work the same way as
 			// their UI counterparts, expect instead of returning the result, a callback
@@ -765,12 +761,6 @@
 				// text element was previously in focus
 				updateContextPanel();
 				
-				// In the event a gradient was flipped:
-				if(selectedElement && mode === "select") {
-					paintBox.fill.update();
-					paintBox.stroke.update();
-				}
-				
 				svgCanvas.runExtensions("elementChanged", {
 					elems: elems
 				});
@@ -852,12 +842,6 @@
 
 				
 				updateTitle();
-			}
-			
-			// Makes sure the current selected paint is available to work with
-			var prepPaints = function() {
-				paintBox.fill.prep();
-				paintBox.stroke.prep();
 			}
 			
 			var flyout_funcs = {};
@@ -1379,62 +1363,8 @@
 			// updates the toolbar (colors, opacity, etc) based on the selected element
 			// This function also updates the opacity and id elements that are in the context panel
 			var updateToolbar = function() {
-				if (selectedElement != null) {
-				
-					switch ( selectedElement.tagName ) {
-					case 'use':
-					case 'image':
-					case 'foreignObject':
-						break;
-					case 'g':
-					case 'a':
-						// Look for common styles
-						
-						var gWidth = null;
-						
-						var childs = selectedElement.getElementsByTagName('*');
-						for(var i = 0, len = childs.length; i < len; i++) {
-							var swidth = childs[i].getAttribute("stroke-width");
-							
-							if(i === 0) {
-								gWidth = swidth;
-							} else if(gWidth !== swidth) {
-								gWidth = null;
-							}
-						}
-						
-						$('#stroke_width').val(gWidth === null ? "" : gWidth);
-						
-						paintBox.fill.update(true);
-						paintBox.stroke.update(true);
-
-						
-						break;
-					default:
-						paintBox.fill.update(true);
-						paintBox.stroke.update(true);
-						
-						$('#stroke_width').val(selectedElement.getAttribute("stroke-width") || 1);
-						$('#stroke_style').val(selectedElement.getAttribute("stroke-dasharray")||"none");
-	
-						var attr = selectedElement.getAttribute("stroke-linejoin") || 'miter';
-						
-						if ($('#linejoin_' + attr).length != 0)
-							setStrokeOpt($('#linejoin_' + attr)[0]);
-						
-						attr = selectedElement.getAttribute("stroke-linecap") || 'butt';
-						
-						if ($('#linecap_' + attr).length != 0)
-							setStrokeOpt($('#linecap_' + attr)[0]);
-					}
-	
-				}
-				
 				// All elements including image and group have opacity
 				if(selectedElement != null) {
-					var opac_perc = ((selectedElement.getAttribute("opacity")||1.0)*100);
-					$('#group_opacity').val(opac_perc);
-					$('#opac_slider').slider('option', 'value', opac_perc);
 					$('#elem_id').val(selectedElement.id);
 				}
 				
@@ -1798,46 +1728,11 @@
 				}, true);
 			}
 			
-			var changeOpacity = function(ctl, val) {
-				if(val == null) val = ctl.value;
-				$('#group_opacity').val(val);
-				if(!ctl || !ctl.handle) {
-					$('#opac_slider').slider('option', 'value', val);
-				}
-				svgCanvas.setOpacity(val/100);
-			}
-		
-			var changeBlur = function(ctl, val, noUndo) {
-				if(val == null) val = ctl.value;
-				$('#blur').val(val);
-				var complete = false;
-				if(!ctl || !ctl.handle) {
-					$('#blur_slider').slider('option', 'value', val);
-					complete = true;
-				}
-				if(noUndo) {
-					svgCanvas.setBlurNoUndo(val);	
-				} else {
-					svgCanvas.setBlur(val, complete);
-				}
-			}
-		
 			var operaRepaint = function() {
 				// Repaints canvas in Opera. Needed for stroke-dasharray change as well as fill change
 				if(!window.opera) return;
 				$('<p/>').hide().appendTo('body').remove();
 			}
-		
-			$('#stroke_style').change(function(){
-				svgCanvas.setStrokeAttr('stroke-dasharray', $(this).val());
-				operaRepaint();
-			});
-
-			$('#stroke_linejoin').change(function(){
-				svgCanvas.setStrokeAttr('stroke-linejoin', $(this).val());
-				operaRepaint();
-			});
-
 		
 			// Lose focus for select elements when changed (Allows keyboard shortcuts to work better)
 			$('select').change(function(){$(this).blur();});
@@ -1951,8 +1846,6 @@
 				else {
 					paint = new $.jGraduate.Paint({alpha: 100, solidColor: color.substr(1)});
 				}
-				
-				paintBox[picker].setPaint(paint);
 				
 				if (isStroke) {
 					svgCanvas.setColor('stroke', color);
@@ -2254,48 +2147,6 @@
 				$('#font_family').val($(this).text()).change();
 			});
 			
-			Editor.addDropDown('#opacity_dropdown', function() {
-				if($(this).find('div').length) return;
-				var perc = parseInt($(this).text().split('%')[0]);
-				changeOpacity(false, perc);
-			}, true);
-			
-			// For slider usage, see: http://jqueryui.com/demos/slider/ 
-			$("#opac_slider").slider({
-				start: function() {
-					$('#opacity_dropdown li:not(.special)').hide();
-				},
-				stop: function() {
-					$('#opacity_dropdown li').show();
-					$(window).mouseup();
-				},
-				slide: function(evt, ui){
-					changeOpacity(ui);
-				}
-			});
-		
-			Editor.addDropDown('#blur_dropdown', $.noop);
-			
-			var slideStart = false;
-			
-			$("#blur_slider").slider({
-				max: 10,
-				step: .1,
-				stop: function(evt, ui) {
-					slideStart = false;
-					changeBlur(ui);
-					$('#blur_dropdown li').show();
-					$(window).mouseup();
-				},
-				start: function() {
-					slideStart = true;
-				},
-				slide: function(evt, ui){
-					changeBlur(ui, null, slideStart);
-				}
-			});
-
-		
 			Editor.addDropDown('#zoom_dropdown', function() {
 				var item = $(this);
 				var val = item.attr('data-val');
@@ -2305,14 +2156,6 @@
 					changeZoom({value:parseInt(item.text())});
 				}
 			}, true);
-			
-			addAltDropDown('#stroke_linecap', '#linecap_opts', function() {
-				setStrokeOpt(this, true);
-			}, {dropUp: true});
-			
-			addAltDropDown('#stroke_linejoin', '#linejoin_opts', function() {
-				setStrokeOpt(this, true);
-			}, {dropUp: true});
 			
 			addAltDropDown('#tool_position', '#position_opts', function() {
 				var letter = this.id.replace('tool_pos','').charAt(0);
@@ -2686,36 +2529,7 @@
 			};
 			
 			var zoomDone = function() {
-		// 		updateBgImage();
-				updateWireFrame();
 				//updateCanvas(); // necessary?
-			}
-		
-			var clickWireframe = function() {
-				var wf = !$('#tool_wireframe').hasClass('push_button_pressed');
-				if (wf) 
-					$('#tool_wireframe').addClass('push_button_pressed').removeClass('tool_button');
-				else
-					$('#tool_wireframe').removeClass('push_button_pressed').addClass('tool_button');
-				workarea.toggleClass('wireframe');
-				
-				if(supportsNonSS) return;
-				var wf_rules = $('#wireframe_rules');
-				if(!wf_rules.length) {
-					wf_rules = $('<style id="wireframe_rules"><\/style>').appendTo('head');
-				} else {
-					wf_rules.empty();
-				}
-				
-				updateWireFrame();
-			}
-			
-			var updateWireFrame = function() {
-				// Test support
-				if(supportsNonSS) return;
-		
-				var rule = "#workarea.wireframe #svgcontent * { stroke-width: " + 1/svgCanvas.getZoom() + "px; }";
-				$('#wireframe_rules').text(workarea.hasClass('wireframe') ? rule : "");
 			}
 		
 			var showSourceEditor = function(e, forSaving){
@@ -2802,7 +2616,6 @@
 					zoomImage();
 					populateLayers();
 					updateTitle();
-					prepPaints();
 				}
 		
 				if (!svgCanvas.setSvgString($('#svg_source_textarea').val())) {
@@ -3339,38 +3152,6 @@
 				}
 			}
 			
-			// TODO: go back to the color boxes having white background-color and then setting
-			//       background-image to none.png (otherwise partially transparent gradients look weird)	
-			var colorPicker = function(elem) {
-				var picker = elem.attr('id') == 'stroke_color' ? 'stroke' : 'fill';
-// 				var opacity = (picker == 'stroke' ? $('#stroke_opacity') : $('#fill_opacity'));
-				var paint = paintBox[picker].paint;
-				var title = (picker == 'stroke' ? 'Pick a Stroke Paint and Opacity' : 'Pick a Fill Paint and Opacity');
-				var was_none = false;
-				var pos = elem.position();
-				$("#color_picker")
-					.draggable({cancel:'.jGraduate_tabs, .jGraduate_colPick, .jGraduate_gradPick, .jPicker', containment: 'window'})
-					.css(curConfig.colorPickerCSS || {'left': pos.left, 'bottom': 50 - pos.top})
-					.jGraduate(
-					{ 
-						paint: paint,
-						window: { pickerTitle: title },
-						images: { clientPath: curConfig.jGraduatePath },
-						newstop: 'inverse'
-					},
-					function(p) {
-						paint = new $.jGraduate.Paint(p);
-						
-						paintBox[picker].setPaint(paint);
-						svgCanvas.setPaint(picker, paint);
-						
-						$('#color_picker').hide();
-					},
-					function(p) {
-						$('#color_picker').hide();
-					});
-			};
-		
 			var updateToolButtonState = function() {
 				var bNoFill = (svgCanvas.getColor('fill') == 'none');
 				var bNoStroke = (svgCanvas.getColor('stroke') == 'none');
@@ -3428,144 +3209,6 @@
 				operaRepaint();
 			};
 			
-
-
-			var PaintBox = function(container, type) {
-				var cur = curConfig[type === 'fill' ? 'initFill' : 'initStroke'];
-				
-				// set up gradients to be used for the buttons
-				var svgdocbox = new DOMParser().parseFromString(
-					'<svg xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%"\
-					fill="#' + cur.color + '" opacity="' + cur.opacity + '"/>\
-					<defs><linearGradient id="gradbox_"/></defs></svg>', 'text/xml');
-				var docElem = svgdocbox.documentElement;
-				
-				docElem = $(container)[0].appendChild(document.importNode(docElem, true));
-
-				docElem.setAttribute('width',16.5);
-				
-				this.rect = docElem.firstChild;
-				this.defs = docElem.getElementsByTagName('defs')[0];
-				this.grad = this.defs.firstChild;
-				this.paint = new $.jGraduate.Paint({solidColor: cur.color});
-				this.type = type;
-
-				this.setPaint = function(paint, apply) {
-					this.paint = paint;
-					
-					var fillAttr = "none";
-					var ptype = paint.type;
-					var opac = paint.alpha / 100;
-					
-					switch ( ptype ) {
-						case 'solidColor':
-							fillAttr = "#" + paint[ptype];
-							break;
-						case 'linearGradient':
-						case 'radialGradient':
-							this.defs.removeChild(this.grad);
-							this.grad = this.defs.appendChild(paint[ptype]);
-							var id = this.grad.id = 'gradbox_' + this.type;
-							fillAttr = "url(#" + id + ')';
-					}
-					
-					this.rect.setAttribute('fill', fillAttr);
-					this.rect.setAttribute('opacity', opac);
-					
-					if(apply) {
-						svgCanvas.setColor(this.type, paintColor, true);
-						svgCanvas.setPaintOpacity(this.type, paintOpacity, true);
-					}
-				}
-				
-				this.update = function(apply) {
-					if(!selectedElement) return;
-					var type = this.type;
-					
-					switch ( selectedElement.tagName ) {
-					case 'use':
-					case 'image':
-					case 'foreignObject':
-						// These elements don't have fill or stroke, so don't change 
-						// the current value
-						return;
-					case 'g':
-					case 'a':
-						var gPaint = null;
-					
-						var childs = selectedElement.getElementsByTagName('*');
-						for(var i = 0, len = childs.length; i < len; i++) {
-							var elem = childs[i];
-							var p = elem.getAttribute(type);
-							if(i === 0) {
-								gPaint = p;
-							} else if(gPaint !== p) {
-								gPaint = null;
-								break;
-							}
-						}
-						if(gPaint === null) {
-							// No common color, don't update anything
-							var paintColor = null;
-							return;
-						}
-						var paintColor = gPaint;
-						
-						var paintOpacity = 1;
-						break;
-					default:
-						var paintOpacity = parseFloat(selectedElement.getAttribute(type + "-opacity"));
-						if (isNaN(paintOpacity)) {
-							paintOpacity = 1.0;
-						}
-						
-						var defColor = type === "fill" ? "black" : "none";
-						var paintColor = selectedElement.getAttribute(type) || defColor;
-					}
-
-					if(apply) {
-						svgCanvas.setColor(type, paintColor, true);
-						svgCanvas.setPaintOpacity(type, paintOpacity, true);
-					}
-
-					paintOpacity *= 100;					
-					
-					var paint = getPaint(paintColor, paintOpacity, type);
-					// update the rect inside #fill_color/#stroke_color
-					this.setPaint(paint);
-				}
-				
-				this.prep = function() {
-					var ptype = this.paint.type;
-				
-					switch ( ptype ) {
-						case 'linearGradient':
-						case 'radialGradient':
-							var paint = new $.jGraduate.Paint({copy: this.paint});
-							svgCanvas.setPaint(type, paint);
-					}
-				}
-			};
-			
-			paintBox.fill = new PaintBox('#fill_color', 'fill');
-			paintBox.stroke = new PaintBox('#stroke_color', 'stroke');
-
-			$('#stroke_width').val(curConfig.initStroke.width);
-			$('#group_opacity').val(curConfig.initOpacity * 100);
-			
-			// Use this SVG elem to test vectorEffect support
-			var test_el = paintBox.fill.rect.cloneNode(false);
-			test_el.setAttribute('style','vector-effect:non-scaling-stroke');
-			var supportsNonSS = (test_el.style.vectorEffect === 'non-scaling-stroke');
-			test_el.removeAttribute('style');
-			var svgdocbox = paintBox.fill.rect.ownerDocument;
-			// Use this to test support for blur element. Seems to work to test support in Webkit
-			var blur_test = svgdocbox.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
-			if(typeof blur_test.stdDeviationX === "undefined") {
-				$('#tool_blur').hide();
-			}
-			$(blur_test).remove();
-			
 			// Test for zoom icon support
 			(function() {
 				var pre = '-' + ua_prefix.toLowerCase() + '-zoom-';
@@ -3578,36 +3221,6 @@
 				workarea.css('cursor', 'auto');
 			}());
 
-			
-			
-			// Test for embedImage support (use timeout to not interfere with page load)
-			setTimeout(function() {
-				svgCanvas.embedImage('images/logo.png', function(datauri) {
-					if(!datauri) {
-						// Disable option
-						$('#image_save_opts [value=embed]').attr('disabled','disabled');
-						$('#image_save_opts input').val(['ref']);
-						curPrefs.img_save = 'ref';
-						$('#image_opt_embed').css('color','#666').attr('title',uiStrings.notification.featNotSupported);
-					}
-				});
-			},1000);
-				
-			$('#fill_color, #tool_fill .icon_label').click(function(){
-				colorPicker($('#fill_color'));
-				updateToolButtonState();
-			});
-		
-			$('#stroke_color, #tool_stroke .icon_label').click(function(){
-				colorPicker($('#stroke_color'));
-				updateToolButtonState();
-			});
-			
-			$('#group_opacityLabel').click(function() {
-				$('#opacity_dropdown button').mousedown();
-				$(window).mouseup();
-			});
-			
 			$('#zoomLabel').click(function() {
 				$('#zoom_dropdown button').mousedown();
 				$(window).mouseup();
@@ -3992,7 +3605,6 @@
 					{sel:'#tool_open', fn: clickOpen, evt: 'mouseup', key: ['O', true]},
 					{sel:'#tool_import', fn: clickImport, evt: 'mouseup'},
 					{sel:'#tool_source', fn: showSourceEditor, evt: 'click', key: ['U', true]},
-					{sel:'#tool_wireframe', fn: clickWireframe, evt: 'click', key: ['F', true]},
 					{sel:'#tool_source_cancel,#svg_source_overlay,#tool_docprops_cancel,#tool_prefs_cancel', fn: cancelOverlays, evt: 'click', key: ['esc', false, false], hidekey: true},
 					{sel:'#tool_source_save', fn: saveSourceEditor, evt: 'click'},
 					{sel:'#tool_docprops_save', fn: saveDocProperties, evt: 'click'},
@@ -4220,10 +3832,6 @@
 				}
 				tool.click().mouseup();
 				
-				if(curConfig.wireframe) {
-					$('#tool_wireframe').click();
-				}
-				
 				if(curConfig.showlayers) {
 					toggleSidePanel();
 				}
@@ -4251,8 +3859,6 @@
 			$('#stroke_width').SpinButton({ min: 0, max: 99, step: 1, smallStep: 0.1, callback: changeStrokeWidth });
 			$('#angle').SpinButton({ min: -180, max: 180, step: 5, callback: changeRotationAngle });
 			$('#font_size').SpinButton({ step: 1, min: 0.001, stepfunc: stepFontSize, callback: changeFontSize });
-			$('#group_opacity').SpinButton({ step: 5, min: 0, max: 100, callback: changeOpacity });
-			$('#blur').SpinButton({ step: .1, min: 0, max: 10, callback: changeBlur });
 			$('#zoom').SpinButton({ min: 0.001, max: 10000, step: 50, stepfunc: stepZoom, callback: changeZoom })
 				// Set default zoom 
 				.val(svgCanvas.getZoom() * 100);
@@ -4778,13 +4384,6 @@
 			Editor.ready(function() {
 				loadSvgString(str);
 			});
-		};
-		
-		Editor.disableUI = function(featList) {
-// 			$(function() {
-// 				$('#tool_wireframe, #tool_image, #main_button, #tool_source, #sidepanels').remove();
-// 				$('#tools_top').css('left', 5);
-// 			});
 		};
 		
 		Editor.loadFromURL = function(url, opts) {
