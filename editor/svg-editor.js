@@ -2432,7 +2432,6 @@
 					zoomImage();
 					populateLayers();
 					updateContextPanel();
-					prepPaints();
 				});
 			};
 			
@@ -2495,17 +2494,6 @@
 				if (undoMgr.getRedoStackSize() > 0) {
 					undoMgr.redo();
 					populateLayers();
-				}
-			};
-			
-			var clickGroup = function(){
-				// group
-				if (multiselected) {
-					svgCanvas.groupSelectedElements();
-				}
-				// ungroup
-				else if(selectedElement){
-					svgCanvas.ungroupSelectedElement();
 				}
 			};
 			
@@ -3625,9 +3613,6 @@
 					{sel:'#tool_undo', fn: clickUndo, evt: 'click', key: ['Z', true]},
 					{sel:'#tool_redo', fn: clickRedo, evt: 'click', key: ['Y', true]},
 					{sel:'#tool_clone,#tool_clone_multi', fn: clickClone, evt: 'click', key: ['D', true]},
-					{sel:'#tool_group', fn: clickGroup, evt: 'click', key: ['G', true]},
-					{sel:'#tool_ungroup', fn: clickGroup, evt: 'click'},
-					{sel:'#tool_unlink_use', fn: clickGroup, evt: 'click'},
 					{sel:'[id^=tool_align]', fn: clickAlign, evt: 'click'},
 					// these two lines are required to make Opera work properly with the flyout mechanism
 		// 			{sel:'#tools_rect_show', fn: clickRect, evt: 'click'},
@@ -3884,12 +3869,6 @@
 						case 'paste_in_place':
 							svgCanvas.pasteElements('in_place');
 							break;
-						case 'group':
-							svgCanvas.groupSelectedElements();
-							break;
-						case 'ungroup':         
-							svgCanvas.ungroupSelectedElement();  
-							break;
 						case 'move_front':
 							moveToTopSelected();
 							break;
@@ -3999,7 +3978,7 @@
 					if(this.files.length==1) {
 						var reader = new FileReader();
 						reader.onloadend = function(e) {
-							svgCanvas.importSvgString(e.target.result, true);
+							svgCanvas.importSvgComponent(e.target.result, true);
 							updateCanvas();
 						};
 						reader.readAsText(this.files[0]);

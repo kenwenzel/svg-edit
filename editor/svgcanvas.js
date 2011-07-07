@@ -5993,6 +5993,78 @@ this.importSvgString = function(xmlString) {
 	return true;
 };
 
+this.importSvgComponent = function(xmlString) {
+	try {
+		var batchCmd = new BatchCommand("Import Component");
+	
+		// convert string into XML document
+		var newDoc = svgedit.utilities.text2xml(xmlString);
+
+		this.prepareSvg(newDoc);
+
+		// TODO manage embedded scripts
+		$(newDoc).find('script').each(function() {
+			var self = $(this);
+			var href = self.attr('xlink:href');
+			if (href) {
+				if ( ! $('head').has('script[src="' + href + '"]')) {
+					$('<script>').attr('type', self.attr('type')).attr('src', href).appendTo($('head'));
+				}
+			} else {
+				$('<script>').attr('type', self.attr('type')).text(self.text()).appendTo($('head'));
+			}
+		}).remove();
+		
+		// import new svg document into our document
+		var svg = svgdoc.importNode(newDoc.documentElement, true);
+	
+		// execute onload actions
+		var onload = [];
+		$(svg).find('[onload]').each(function() {
+			onload.push({elem : this, script : $(this).attr('onload')});
+		}).removeAttr('onload');
+
+		$.each(onload, function(index, value) {
+			// change the scope to the current element
+			(function() {
+				eval(value.script);
+			}).apply(value.elem);
+		});	
+
+		uniquifyElems(svg);
+
+		var defs = findDefs();
+		if(svgedit.browser.isGecko()) {
+			// Move all gradients into root for Firefox, workaround for this bug:
+			// https://bugzilla.mozilla.org/show_bug.cgi?id=353575
+			// TODO: Make this properly undo-able.
+			$(svg).find('linearGradient, radialGradient, pattern').appendTo(defs);
+		}
+
+		var group = svgdoc.createElementNS(svgns, "g");
+		$(svg).children().appendTo(group);
+		group.id = getNextId();
+		
+		(current_group || getCurrentDrawing().getCurrentLayer()).appendChild(group);
+		// $.each(onload, function(index, value) { 
+		//	alert(value.elem + " " + value.script);
+		// });		
+
+		batchCmd.addSubCommand(new InsertElementCommand(group));
+		clearSelection();
+		
+		addToSelection([group]);
+		
+		addCommandToHistory(batchCmd);
+		call("changed", [svgcontent]);
+	} catch(e) {
+		console.log(e);
+		return false;
+	}
+
+	return true;
+};
+
 // TODO(codedread): Move all layer/context functions in draw.js
 // Layer API Functions
 

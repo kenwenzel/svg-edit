@@ -72,7 +72,7 @@ var listMap_ = {};
 //		SVGTransform removeItem ( in unsigned long index ) (DOES NOT THROW DOMException, INDEX_SIZE_ERR)
 //		SVGTransform appendItem ( in SVGTransform newItem )
 //		NOT IMPLEMENTED: SVGTransform createSVGTransformFromMatrix ( in SVGMatrix matrix );
-//		NOT IMPLEMENTED: SVGTransform consolidate (  );
+//		SVGTransform consolidate (  );
 //	}
 // **************************************************************************************
 svgedit.transformlist.SVGTransformList = function(elem) {
@@ -81,7 +81,6 @@ svgedit.transformlist.SVGTransformList = function(elem) {
 	// TODO: how do we capture the undo-ability in the changed transform list?
 	this._update = function() {
 		var tstr = "";
-		var concatMatrix = svgroot.createSVGMatrix();
 		for (var i = 0; i < this.numberOfItems; ++i) {
 			var xform = this._list.getItem(i);
 			tstr += transformToString(xform) + " ";
@@ -236,6 +235,26 @@ svgedit.transformlist.SVGTransformList = function(elem) {
 		this._list._update();
 		return newItem;
 	};
+
+	this.consolidate() = function() {
+		if (this.numberOfItems > 1) {		
+			var newMatrix =  this._list.getItem(0).matrix;
+			for (var i = 1; i < this.numberOfItems; ++i) {
+				newMatrix = newMatrix.multiply(this._list.getItem(i).matrix);
+			}
+
+			var xform = svgroot.createSVGTransform();
+			this.numberOfItems = 1;
+			this._xforms = [xform];
+			this._list.update();
+			return xform;
+		} else if (this.numberOfItems == 1) {
+			return this._list.getItem(0);
+		}
+	
+		return svgroot.createSVGTransform();
+
+	}
 };
 
 
