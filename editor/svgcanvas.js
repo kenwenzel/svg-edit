@@ -5683,11 +5683,6 @@ var convertToGroup = this.convertToGroup = function(elem) {
 		
 		selectOnly([g]);
 		
-		var cm = pushGroupProperties(g, true);
-		if(cm) {
-			batchCmd.addSubCommand(cm);
-		}
-
 		addCommandToHistory(batchCmd);
 		
 	} else {
