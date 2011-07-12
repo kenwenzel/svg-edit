@@ -1427,7 +1427,7 @@ var recalculateDimensions = this.recalculateDimensions = function(selected) {
 		selected.removeAttribute("transform");
 		return null;
 	}
-	
+
 	// TODO: Make this work for more than 2
 	if (tlist) {
 		var k = tlist.numberOfItems;
@@ -1719,13 +1719,27 @@ var recalculateDimensions = this.recalculateDimensions = function(selected) {
 		{
 			operation = 2; // translate
 			var T_M = transformListToTransform(tlist).matrix;
+
+			// <COMPONENTS>
+			var classes = $(selected).attr("class");
+			if (classes && classes.match(/component/)) {
+				var newxlate = svgroot.createSVGTransform();
+				newxlate.setTranslate(T_M.e, T_M.f);
+				
+				tlist.clear();
+				tlist.appendItem(newxlate);
+				// TODO return correct command
+				return;
+			}
+			// </COMPONENTS>
+			
 			tlist.removeItem(0);
 			var M_inv = transformListToTransform(tlist).matrix.inverse();
 			var M2 = matrixMultiply( M_inv, T_M );
 			
 			tx = M2.e;
 			ty = M2.f;
-
+			
 			if (tx != 0 || ty != 0) {
 				// we pass the translates down to the individual children
 				var children = selected.childNodes;
@@ -6002,11 +6016,11 @@ this.importSvgComponent = function(xmlString) {
 			var self = $(this);
 			var href = self.attr('xlink:href');
 			if (href) {
-				if ( ! $('head').has('script[src="' + href + '"]')) {
-					$('<script>').attr('type', self.attr('type')).attr('src', href).appendTo($('head'));
-				}
+				// ignore external scripts for now
+				// these should be imported by HeadJS
 			} else {
-				$('<script>').attr('type', self.attr('type')).text(self.text()).appendTo($('head'));
+				var type = self.attr('type');
+				$('<script>').attr('type', type).text(self.text()).appendTo($('head'));
 			}
 		}).remove();
 		
