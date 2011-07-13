@@ -1601,7 +1601,25 @@ var recalculateDimensions = this.recalculateDimensions = function(selected) {
 			var tm = tlist.getItem(N-3).matrix,
 				sm = tlist.getItem(N-2).matrix,
 				tmn = tlist.getItem(N-1).matrix;
-		
+
+			// <COMPONENTS>
+			if (N > 3) {
+				// strip scale transforms
+				var existingXForm = transformListToTransform(tlist, 0, N-4);
+				var existingM = existingXForm.matrix;
+
+				// move position of component
+				var translateM = matrixMultiply(existingM.inverse(), tm, sm, tmn, existingM);
+				existingXForm.setTranslate(existingM.e + translateM.e, existingM.f + translateM.f); 
+				// TODO replace all preceding transforms
+				tlist.replaceItem(existingXForm, N-4);
+
+				// use upper left corner as new origin for scaling
+				tm = svgroot.createSVGTransform().matrix;
+				tmn = svgroot.createSVGTransform().matrix;
+			}
+			// </COMPONENTS>
+
 			var children = selected.childNodes;
 			var c = children.length;
 			while (c--) {
