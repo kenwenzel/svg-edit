@@ -595,6 +595,13 @@ svgedit.utilities.assignAttributes = function(node, attrs, suspendLength, unitCh
 	var handle = null;
 	if (!svgedit.browser.isOpera()) svgroot_.suspendRedraw(suspendLength);
 
+	// <BEHVAVIOR>
+	var behaviour = $(node).data("behaviour");
+	if (behaviour && behaviour.preUpdate) {
+		behaviour.preUpdate.apply(node, [attrs]);
+	}
+	// </BEHAVIOR>
+
 	for (var i in attrs) {
 		var ns = (i.substr(0,4) === "xml:" ? XMLNS : 
 			i.substr(0,6) === "xlink:" ? XLINKNS : null);
@@ -608,6 +615,12 @@ svgedit.utilities.assignAttributes = function(node, attrs, suspendLength, unitCh
 		}
 		
 	}
+
+	// <BEHVAVIOR>
+	if (behaviour && behaviour.postUpdate) {
+		behaviour.postUpdate.apply(node, [attrs]);
+	}
+	// </BEHVAVIOR>
 	
 	if (!svgedit.browser.isOpera()) svgroot_.unsuspendRedraw(handle);
 };

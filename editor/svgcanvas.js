@@ -1737,6 +1737,7 @@ var recalculateDimensions = this.recalculateDimensions = function(selected) {
 		{
 			operation = 2; // translate
 			var T_M = transformListToTransform(tlist).matrix;
+			tlist.removeItem(0);
 
 			// <COMPONENTS>
 			var classes = $(selected).attr("class");
@@ -1744,14 +1745,19 @@ var recalculateDimensions = this.recalculateDimensions = function(selected) {
 				var newxlate = svgroot.createSVGTransform();
 				newxlate.setTranslate(T_M.e, T_M.f);
 				
-				tlist.clear();
-				tlist.appendItem(newxlate);
-				// TODO return correct command
-				return;
+				// if list head is a translate then replace it, 
+				// else prepend the new translate transform
+				if (tlist.numberOfItems && tlist.getItem(0).type == 2) {
+					tlist.replaceItem(newxlate, 0);
+				} else {
+					tlist.insertItemBefore(newxlate, 0);
+				}
+
+				batchCmd.addSubCommand(new ChangeElementCommand(selected, initial));
+				return batchCmd;
 			}
 			// </COMPONENTS>
 			
-			tlist.removeItem(0);
 			var M_inv = transformListToTransform(tlist).matrix.inverse();
 			var M2 = matrixMultiply( M_inv, T_M );
 			
